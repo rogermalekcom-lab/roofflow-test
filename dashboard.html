@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RoofFlow AI - Lead Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: #fff;
+        }
+        
+        .header {
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            padding: 2rem;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .header p {
+            opacity: 0.9;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            padding: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .stat-card {
+            background: rgba(255,255,255,0.1);
+            border-radius: 16px;
+            padding: 1.5rem;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .stat-number {
+            font-size: 3rem;
+            font-weight: bold;
+            background: linear-gradient(90deg, #667eea, #f093fb);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .stat-label {
+            opacity: 0.8;
+            margin-top: 0.5rem;
+        }
+        
+        .leads-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .leads-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        
+        .leads-header h2 {
+            font-size: 1.8rem;
+        }
+        
+        .btn-refresh {
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.2s;
+        }
+        
+        .btn-refresh:hover {
+            transform: scale(1.05);
+        }
+        
+        .lead-card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            border-left: 4px solid #667eea;
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 1rem;
+            align-items: center;
+        }
+        
+        .lead-card.approved { border-left-color: #10b981; }
+        
+        .lead-address {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        
+        .lead-proposal {
+            opacity: 0.8;
+            font-size: 0.95rem;
+        }
+        
+        .lead-meta {
+            display: flex;
+            gap: 1rem;
+            margin-top: 0.5rem;
+            font-size: 0.85rem;
+            opacity: 0.7;
+        }
+        
+        .lead-value {
+            background: linear-gradient(90deg, #10b981, #059669);
+            padding: 0.8rem 1.5rem;
+            border-radius: 8px;
+            font-weight: bold;
+            text-align: center;
+        }
+        
+        .lead-value small {
+            display: block;
+            font-size: 0.7rem;
+            opacity: 0.8;
+        }
+        
+        .last-updated {
+            text-align: center;
+            padding: 2rem;
+            opacity: 0.6;
+            font-size: 0.9rem;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            opacity: 0.7;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>ðŸ  RoofFlow AI</h1>
+        <p>Planning Applications Lead Dashboard - Worcester & Warwickshire</p>
+    </div>
+    
+    <div class="stats">
+        <div class="stat-card">
+            <div class="stat-number" id="totalLeads">0</div>
+            <div class="stat-label">Total Leads</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" id="approvedLeads">0</div>
+            <div class="stat-label">Approved</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" id="loftCount">0</div>
+            <div class="stat-label">Loft Conversions</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" id="totalValue">Â£0</div>
+            <div class="stat-label">Est. Value</div>
+        </div>
+    </div>
+    
+    <div class="leads-container">
+        <div class="leads-header">
+            <h2>ðŸ“‹ Latest Planning Leads</h2>
+            <button class="btn-refresh" onclick="refreshLeads()">ðŸ”„ Refresh</button>
+        </div>
+        
+        <div id="leadsList">
+            <div class="empty-state">Loading leads...</div>
+        </div>
+    </div>
+    
+    <div class="last-updated">
+        Last updated: <span id="updateTime">-</span>
+    </div>
+    
+    <script>
+        // Sample data - will be replaced by actual API data
+        const sampleLeads = [
+            {
+                id: 1,
+                address: "53 Stanley Road, Worcester WR5 1BB",
+                proposal: "Loft Conversion with rear dormer",
+                status: "Approved",
+                applicant: "Mrs F Begum Hussain",
+                decision_date: "2025-11-11",
+                council: "Worcester City",
+                type: "loft_conversion",
+                value_estimate: "Â£8,000-Â£15,000"
+            },
+            {
+                id: 2,
+                address: "27 Hornsby Avenue, Worcester WR4 0PN",
+                proposal: "Garage conversion",
+                status: "Approved",
+                applicant: "Mr Gary Wilkes",
+                decision_date: "2024-12-31",
+                council: "Worcester City",
+                type: "garage_conversion",
+                value_estimate: "Â£5,000-Â£10,000"
+            },
+            {
+                id: 3,
+                address: "Bethany Lodge, 222 Malvern Road, Worcester WR2 4PA",
+                proposal: "Front and rear ramps",
+                status: "Approved",
+                applicant: "Mr Ian Trigg (Keys Group)",
+                decision_date: "2025-11-17",
+                council: "Worcester City",
+                type: "access_modification",
+                value_estimate: "Â£2,000-Â£5,000"
+            },
+            {
+                id: 4,
+                address: "Ombersley Road, Worcester",
+                proposal: "Two-storey side extension + loft conversion",
+                status: "Approved",
+                applicant: "Unknown",
+                decision_date: "2025-09-14",
+                council: "Worcester City",
+                type: "extension_loft",
+                value_estimate: "Â£25,000-Â£40,000"
+            }
+        ];
+        
+        function renderLeads(leads) {
+            const container = document.getElementById('leadsList');
+            
+            if (!leads || leads.length === 0) {
+                container.innerHTML = '<div class="empty-state">No leads found. Run research to fetch new data.</div>';
+                return;
+            }
+            
+            let html = '';
+            leads.forEach(lead => {
+                html += `
+                    <div class="lead-card ${lead.status.toLowerCase()}">
+                        <div>
+                            <div class="lead-address">ðŸ“ ${lead.address}</div>
+                            <div class="lead-proposal">${lead.proposal}</div>
+                            <div class="lead-meta">
+                                <span>ðŸ‘¤ ${lead.applicant}</span>
+                                <span>ðŸ›ï¸ ${lead.council}</span>
+                                <span>ðŸ“… ${lead.decision_date}</span>
+                            </div>
+                        </div>
+                        <div class="lead-value">
+                            ${lead.value_estimate}
+                            <small>Est. Value</small>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+            
+            // Update stats
+            document.getElementById('totalLeads').textContent = leads.length;
+            document.getElementById('approvedLeads').textContent = leads.filter(l => l.status === 'Approved').length;
+            document.getElementById('loftCount').textContent = leads.filter(l => l.type === 'loft_conversion' || l.type === 'extension_loft').length;
+            
+            // Calculate total value
+            let totalMin = 0;
+            leads.forEach(lead => {
+                const val = lead.value_estimate.replace(/[Â£,]/g, '').split('-');
+                totalMin += parseInt(val[0]) || 0;
+            });
+            document.getElementById('totalValue').textContent = 'Â£' + (totalMin / 1000).toFixed(0) + 'k+';
+            
+            document.getElementById('updateTime').textContent = new Date().toLocaleString();
+        }
+        
+        function refreshLeads() {
+            // In production, this would fetch from an API
+            renderLeads(sampleLeads);
+        }
+        
+        // Initialize
+        renderLeads(sampleLeads);
+    </script>
+</body>
+</html>
